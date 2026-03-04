@@ -1,0 +1,97 @@
+﻿<Window x:Class="bws.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Better Window Switcher" 
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Loaded="Window_Loaded"
+        KeyDown="Window_KeyDown"
+        KeyUp="Window_KeyUp">
+
+    <Window.Resources>
+        <!-- Template for Window Mode (Alt+Tab) -->
+        <DataTemplate x:Key="WindowItemTemplate">
+            <Border x:Name="IconBorder" Background="Transparent" CornerRadius="6" Margin="6,0" Padding="8" Width="64" Height="64">
+                <Image Source="{Binding Icon}" Stretch="Uniform" />
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="IconBorder" Property="Background" Value="#66FFFFFF" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Template for Workspace Mode (Alt+Esc) -->
+        <DataTemplate x:Key="WorkspaceItemTemplate">
+            <Border x:Name="IconBorder" Background="Transparent" CornerRadius="6" Margin="6,0" Padding="8" Width="180" Height="64">
+                <Grid>
+                    <!-- Workspace Icon Placeholder -->
+                    <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="White" Opacity="0.7"/>
+                    <!-- Workspace Name -->
+                    <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" />
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="IconBorder" Property="Background" Value="#66FFFFFF" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <!-- Floating Backplate (ZaButon) -->
+        <Border Background="#E61A1A1A" CornerRadius="24" Padding="40,30,40,30">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="10" Opacity="0.5" />
+            </Border.Effect>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /> <!-- Title Area -->
+                    <RowDefinition Height="Auto" /> <!-- Thumbnail Preview Area -->
+                    <RowDefinition Height="Auto" /> <!-- Icon List Strip -->
+                </Grid.RowDefinitions>
+
+                <!-- Dynamic Title of hovered window above the thumbnails -->
+                <TextBlock x:Name="ActiveWindowText" 
+                           Grid.Row="0" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,15" 
+                           FontSize="18" 
+                           FontWeight="SemiBold" 
+                           Foreground="White" 
+                           Effect="{DynamicResource DropShadowEffect}" />
+
+                <!-- Border acting as the anchor for the DWM Thumbnail -->
+                <Border x:Name="ThumbnailAnchor" 
+                        Grid.Row="1" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center" 
+                        Width="600" Height="360" 
+                        Margin="0,0,0,30" 
+                        Background="Transparent" />
+
+                <!-- Horizontal scroll area for app icons -->
+                <Border Grid.Row="2" Background="#44FFFFFF" CornerRadius="12" Padding="12" HorizontalAlignment="Center">
+                    <ItemsControl x:Name="IconList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid.Resources>
+            <DropShadowEffect x:Key="DropShadowEffect" Color="Black" BlurRadius="10" ShadowDepth="0" Opacity="0.8" />
+        </Grid.Resources>
+    </Grid>
+</Window>
