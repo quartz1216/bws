@@ -11,6 +11,7 @@ namespace bws
         private KeyboardHook? _keyboardHook;
         private MainWindow? _mainWindow;
         private Mutex? _mutex;
+        private AppSettings _settings = new();
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -33,13 +34,20 @@ namespace bws
             _notifyIcon.Visible = true;
             _notifyIcon.Text = "Better Window Switcher (bws)";
 
+            // Load persisted settings
+            _settings = AppSettings.Load();
+            WindowManager.ShowAllWindows = _settings.ShowAllWindows;
+
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
             
             var toggleItem = new System.Windows.Forms.ToolStripMenuItem("Show Windows from All Desktops");
             toggleItem.CheckOnClick = true;
+            toggleItem.Checked = _settings.ShowAllWindows;
             toggleItem.CheckedChanged += (s, ev) => 
             {
                 WindowManager.ShowAllWindows = toggleItem.Checked;
+                _settings.ShowAllWindows = toggleItem.Checked;
+                _settings.Save();
             };
             
             contextMenu.Items.Add(toggleItem);
@@ -48,8 +56,10 @@ namespace bws
             
             _notifyIcon.ContextMenuStrip = contextMenu;
 
-            // Initialize MainWindow
+            // Initialize MainWindow forcing HWND creation
             _mainWindow = new MainWindow();
+            _mainWindow.Show();
+            _mainWindow.Hide();
             
             // Initialize Tracking Managers
             WindowManager.InitializeMruTracking();
@@ -59,13 +69,12 @@ namespace bws
             try
             {
                 _keyboardHook = new KeyboardHook();
-                _keyboardHook.AltTabPressed += KeyboardHook_AltTabPressed;
-                _keyboardHook.AltWPressed += KeyboardHook_AltWPressed;
+                _keyboardHook.AltTabOpen += KeyboardHook_AltTabOpen;
                 _keyboardHook.AltReleased += KeyboardHook_AltReleased;
                 _keyboardHook.EnterPressed += KeyboardHook_EnterPressed;
                 _keyboardHook.EscPressed += KeyboardHook_EscPressed;
                 _keyboardHook.QPressed += KeyboardHook_QPressed;
-                _keyboardHook.ArrowKeyPressed += KeyboardHook_ArrowKeyPressed;
+                _keyboardHook.DirectionKeyPressed += KeyboardHook_DirectionKeyPressed;
                 _keyboardHook.IsSwitcherActive = () => _mainWindow != null && _mainWindow.IsSwitcherActive;
             }
             catch (Exception ex)
@@ -75,19 +84,11 @@ namespace bws
             }
         }
 
-        private void KeyboardHook_AltTabPressed(object? sender, bool isShiftPressed)
+        private void KeyboardHook_AltTabOpen(object? sender, bool isSticky)
         {
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                _mainWindow?.ShowSwitcher(isShiftPressed);
-            }));
-        }
-
-        private void KeyboardHook_AltWPressed(object? sender, bool isShiftPressed)
-        {
-            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                _mainWindow?.ShowWorkspaceSwitcher(isShiftPressed);
+                _mainWindow?.ShowSwitcher(isSticky);
             }));
         }
 
@@ -108,7 +109,7 @@ namespace bws
             {
                 if (_mainWindow != null && _mainWindow.IsSwitcherActive)
                 {
-                    _mainWindow.CommitSelection();
+                    _mainWindow.CommitSelection(true);
                 }
             }));
         }
@@ -135,13 +136,13 @@ namespace bws
             }));
         }
 
-        private void KeyboardHook_ArrowKeyPressed(object? sender, bool isLeft)
+        private void KeyboardHook_DirectionKeyPressed(object? sender, MoveDirection dir)
         {
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (_mainWindow != null && _mainWindow.IsSwitcherActive)
                 {
-                    _mainWindow.ShiftSelection(isLeft);
+                    _mainWindow.MoveSelection(dir);
                 }
             }));
         }
