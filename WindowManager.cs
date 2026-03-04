@@ -21,7 +21,7 @@ namespace bws
 
     public static class WindowManager
     {
-        public static bool ShowAllWindows { get; set; } = false;
+        public static bool ShowAllWindows { get; set; } = true;
 
         private static HashSet<string> _blacklist = new(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<IntPtr, BitmapSource> _iconCache = new();
