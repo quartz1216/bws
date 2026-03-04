@@ -11,7 +11,6 @@ namespace bws
         private KeyboardHook? _keyboardHook;
         private MainWindow? _mainWindow;
         private Mutex? _mutex;
-        private AppSettings _settings = new();
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -34,26 +33,8 @@ namespace bws
             _notifyIcon.Visible = true;
             _notifyIcon.Text = "Better Window Switcher (bws)";
 
-            // Load persisted settings
-            _settings = AppSettings.Load();
-            WindowManager.ShowAllWindows = _settings.ShowAllWindows;
-
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
-            
-            var toggleItem = new System.Windows.Forms.ToolStripMenuItem("Show Windows from All Desktops");
-            toggleItem.CheckOnClick = true;
-            toggleItem.Checked = _settings.ShowAllWindows;
-            toggleItem.CheckedChanged += (s, ev) => 
-            {
-                WindowManager.ShowAllWindows = toggleItem.Checked;
-                _settings.ShowAllWindows = toggleItem.Checked;
-                _settings.Save();
-            };
-            
-            contextMenu.Items.Add(toggleItem);
-            contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             contextMenu.Items.Add("Quit bws", null, OnQuitClicked);
-            
             _notifyIcon.ContextMenuStrip = contextMenu;
 
             // Initialize MainWindow forcing HWND creation
