@@ -1,4 +1,7 @@
 > [!CAUTION]
+> This is a project where I basically let Antigravity wing it to create some utilities I needed. Fair warning: the project is likely a chaotic, disjointed mess
+
+> [!CAUTION]
 > **Warning: Experimental & Fragile**  
 > This project heavily relies on `IVirtualDesktopManagerInternal`, a **private and undocumented** Windows COM API. Microsoft can and will change this interface in any Windows update, which **will break this application** without notice.
 >
