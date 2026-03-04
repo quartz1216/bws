@@ -36,6 +36,17 @@ namespace bws
             return null;
         }
 
+        public static Guid? GetDesktopIdForWindow(IntPtr hWnd)
+        {
+            try
+            {
+                var d = Desktop.FromWindow(hWnd);
+                if (d != null) return d.Id;
+            }
+            catch {}
+            return null;
+        }
+
         public static void Initialize()
         {
             try
@@ -149,15 +160,13 @@ namespace bws
         {
             try
             {
-                for (int i = 0; i < Desktop.Count; i++)
-                {
-                    var d = Desktop.FromIndex(i);
-                    if (d != null && d.Id == id)
-                    {
-                        d.MakeVisible();
-                        break;
-                    }
-                }
+                // Use direct COM SwitchDesktop instead of MakeVisible.
+                // MakeVisible manipulates the taskbar focus (AttachThreadInput + SetForegroundWindow + SW_MINIMIZE)
+                // which causes pinned/all-desktop windows to steal focus from the intended target.
+                // Direct SwitchDesktop avoids this and lets the caller set focus immediately after.
+                var desktopId = id;
+                var ivd = DesktopManager.VirtualDesktopManagerInternal.FindDesktop(ref desktopId);
+                DesktopManager.VirtualDesktopManagerInternal.SwitchDesktop(ivd);
             }
             catch (Exception ex)
             {

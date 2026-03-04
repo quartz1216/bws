@@ -8,16 +8,22 @@ using System.Windows.Interop;
 
 namespace bws
 {
+    public class WorkspaceRow
+    {
+        public WorkspaceItem Workspace { get; set; } = new();
+        public List<WindowItem> Windows { get; set; } = new();
+    }
+
     public partial class MainWindow : Window
     {
-        private List<WindowItem> _windows = new();
-        private List<WorkspaceItem> _workspaces = new();
-        private bool _isWorkspaceMode = false;
+        private List<WorkspaceRow> _grid = new();
         
-        private int _selectedIndex = 0;
+        private int _selectedRowIndex = 0;
+        private int _selectedColIndex = 0;
+        private bool _isStickyMode = false;
         private IntPtr _thumbnailId = IntPtr.Zero;
 
-        public bool IsSwitcherActive => _isWorkspaceMode ? _workspaces.Count > 0 : _windows.Count > 0;
+        public bool IsSwitcherActive => _grid.Count > 0;
 
         public MainWindow()
         {
@@ -38,152 +44,163 @@ namespace bws
             Win32Interop.SetWindowLong(hwnd, Win32Interop.GWL_EXSTYLE, exStyle | Win32Interop.WS_EX_NOACTIVATE);
         }
 
-        // Called by App.cs when Alt+Tab is intercepted
-        public void ShowSwitcher(bool isShiftPressed)
+        public void ShowSwitcher(bool isSticky)
         {
-            if (!this.IsVisible)
+            if (this.IsVisible) return;
+
+            _isStickyMode = isSticky;
+            
+            var workspaces = WorkspaceManager.GetWorkspacesInMruOrder();
+            var allWindows = WindowManager.GetOpenWindows();
+            allWindows.RemoveAll(w => w.Hwnd == new WindowInteropHelper(this).Handle);
+            
+            // Remove the currently active (foreground) window - user is switching AWAY from it
+            IntPtr foregroundHwnd = Win32Interop.GetForegroundWindow();
+            allWindows.RemoveAll(w => w.Hwnd == foregroundHwnd);
+
+            _grid.Clear();
+
+            foreach (var ws in workspaces)
             {
-                _isWorkspaceMode = false;
-                
-                // Populate windows
-                _windows = WindowManager.GetOpenWindows();
-                
-                // Do not count ourselves if we appear
-                _windows.RemoveAll(w => w.Hwnd == new WindowInteropHelper(this).Handle);
-
-                if (_windows.Count == 0) return;
-
-                // Bind to list
-                IconList.ItemsSource = _windows;
-                
-                // Force Icon Template
-                IconList.ItemTemplate = (DataTemplate)this.Resources["WindowItemTemplate"];
-                
-                // Start selection at 1 (the previous window) if possible
-                _selectedIndex = _windows.Count > 1 ? 1 : 0;
-                
-                this.UpdateLayout();
-                UpdateSelectionUI();
-
-                this.Show();
+                _grid.Add(new WorkspaceRow { Workspace = ws });
             }
-            else if (!_isWorkspaceMode)
+
+            Guid fallbackDeskId = workspaces.FirstOrDefault(w => w.IsCurrent)?.Id ?? Guid.Empty;
+
+            foreach (var win in allWindows)
             {
-                CycleSelection(isShiftPressed);
-                UpdateSelectionUI();
+                Guid deskId = WorkspaceManager.GetDesktopIdForWindow(win.Hwnd) ?? fallbackDeskId;
+                var row = _grid.FirstOrDefault(r => r.Workspace.Id == deskId);
+                if (row != null)
+                {
+                    row.Windows.Add(win);
+                }
+                else if (_grid.Count > 0)
+                {
+                    _grid[0].Windows.Add(win);
+                }
             }
+
+            // Remove rows that have no windows
+            _grid.RemoveAll(r => r.Windows.Count == 0);
+
+            if (_grid.Count == 0) return;
+
+            WorkspaceList.ItemsSource = null;
+            WorkspaceList.ItemsSource = _grid;
+            
+            _selectedRowIndex = 0;
+            _selectedColIndex = 0;
+            
+            ThumbnailAnchor.Visibility = Visibility.Visible;
+            
+            this.UpdateLayout();
+            UpdateSelectionUI();
+
+            this.Show();
         }
 
-        // Called by App.cs when Alt+Esc is intercepted
-        public void ShowWorkspaceSwitcher(bool isShiftPressed)
+        public void MoveSelection(MoveDirection dir)
         {
-            if (!this.IsVisible)
+            if (_grid.Count == 0) return;
+
+            if (dir == MoveDirection.Right)
             {
-                _isWorkspaceMode = true;
-
-                // Populate workspaces
-                _workspaces = WorkspaceManager.GetWorkspacesInMruOrder();
-
-                if (_workspaces.Count == 0) return;
-
-                // Bind to list
-                IconList.ItemsSource = _workspaces;
-                
-                // Force Workspace Template
-                IconList.ItemTemplate = (DataTemplate)this.Resources["WorkspaceItemTemplate"];
-                
-                // Start selection at 1 (the previous workspace) if possible
-                _selectedIndex = _workspaces.Count > 1 ? 1 : 0;
-                
-                // Hide thumbnail anchor for workspace mode
-                ThumbnailAnchor.Visibility = Visibility.Collapsed;
-                ActiveWindowText.Text = "Virtual Desktops";
-                
-                this.UpdateLayout();
-                UpdateSelectionUI();
-
-                this.Show();
+                _selectedColIndex++;
+                if (_selectedColIndex >= _grid[_selectedRowIndex].Windows.Count)
+                {
+                    _selectedColIndex = 0; 
+                }
             }
-            else if (_isWorkspaceMode)
+            else if (dir == MoveDirection.Left)
             {
-                CycleSelection(isShiftPressed);
-                UpdateSelectionUI();
+                _selectedColIndex--;
+                if (_selectedColIndex < 0)
+                {
+                    _selectedColIndex = Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1);
+                }
             }
-        }
-
-        private void CycleSelection(bool isShiftPressed)
-        {
-            int count = _isWorkspaceMode ? _workspaces.Count : _windows.Count;
-            if (count == 0) return;
-
-            if (isShiftPressed)
+            else if (dir == MoveDirection.Down)
             {
-                _selectedIndex--;
-                if (_selectedIndex < 0) _selectedIndex = count - 1;
+                _selectedRowIndex++;
+                if (_selectedRowIndex >= _grid.Count)
+                {
+                    _selectedRowIndex = 0;
+                }
+                _selectedColIndex = Math.Min(_selectedColIndex, Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1));
             }
-            else
+            else if (dir == MoveDirection.Up)
             {
-                _selectedIndex++;
-                if (_selectedIndex >= count) _selectedIndex = 0;
+                _selectedRowIndex--;
+                if (_selectedRowIndex < 0)
+                {
+                    _selectedRowIndex = _grid.Count - 1;
+                }
+                _selectedColIndex = Math.Min(_selectedColIndex, Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1));
             }
-        }
-
-        public void ShiftSelection(bool isLeft)
-        {
-            int count = _isWorkspaceMode ? _workspaces.Count : _windows.Count;
-            if (count == 0) return;
-
-            if (isLeft)
+            else if (dir == MoveDirection.Home)
             {
-                _selectedIndex--;
-                if (_selectedIndex < 0) _selectedIndex = count - 1;
+                _selectedColIndex = 0;
             }
-            else
+            else if (dir == MoveDirection.End)
             {
-                _selectedIndex++;
-                if (_selectedIndex >= count) _selectedIndex = 0;
+                _selectedColIndex = Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1);
             }
-
+            else if (dir == MoveDirection.PageUp)
+            {
+                _selectedRowIndex = 0;
+                _selectedColIndex = Math.Min(_selectedColIndex, Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1));
+            }
+            else if (dir == MoveDirection.PageDown)
+            {
+                _selectedRowIndex = _grid.Count - 1;
+                _selectedColIndex = Math.Min(_selectedColIndex, Math.Max(0, _grid[_selectedRowIndex].Windows.Count - 1));
+            }
+            
             UpdateSelectionUI();
         }
 
         private void UpdateSelectionUI()
         {
-            int count = _isWorkspaceMode ? _workspaces.Count : _windows.Count;
-            if (count == 0) return;
+            if (_grid.Count == 0) return;
 
-            // Highlight the correct item in ItemsControl (Hack for simple styling)
-            foreach (var item in VisualTreeHelperEx.FindVisualChildren<Border>(IconList))
+            // Clear all highlights
+            foreach (var border in VisualTreeHelperEx.FindVisualChildren<Border>(WorkspaceList))
             {
-                if (item.Name == "IconBorder")
+                if (border.Name == "IconBorder")
                 {
-                    item.Background = System.Windows.Media.Brushes.Transparent;
+                    border.Background = System.Windows.Media.Brushes.Transparent;
                 }
             }
 
-            var container = IconList.ItemContainerGenerator.ContainerFromIndex(_selectedIndex) as ContentPresenter;
-            if (container != null)
+            // Find the active nested ItemsControl
+            var rowContainer = WorkspaceList.ItemContainerGenerator.ContainerFromIndex(_selectedRowIndex) as ContentPresenter;
+            if (rowContainer != null)
             {
-                var border = VisualTreeHelperEx.FindVisualChild<Border>(container);
-                if (border != null)
+                var innerItemsControl = VisualTreeHelperEx.FindVisualChild<ItemsControl>(rowContainer);
+                if (innerItemsControl != null)
                 {
-                    // Slightly translucent white to highlight
-                    border.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                    var colContainer = innerItemsControl.ItemContainerGenerator.ContainerFromIndex(_selectedColIndex) as ContentPresenter;
+                    if (colContainer != null)
+                    {
+                        var border = VisualTreeHelperEx.FindVisualChild<Border>(colContainer);
+                        if (border != null)
+                        {
+                            border.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+                        }
+                    }
                 }
+                // Auto-scroll after layout completes
+                var capturedRow = rowContainer;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+                {
+                    capturedRow?.BringIntoView();
+                }));
             }
 
-            if (_isWorkspaceMode)
-            {
-                var selectedWorkspace = _workspaces[_selectedIndex];
-                ActiveWindowText.Text = selectedWorkspace.Name;
-                UnregisterThumbnail();
-            }
-            else
-            {
-                var selectedWindow = _windows[_selectedIndex];
-                ActiveWindowText.Text = selectedWindow.Title;
-                RegisterThumbnail(selectedWindow.Hwnd);
-            }
+            var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];
+            ActiveWindowText.Text = selectedWindow.Title;
+            RegisterThumbnail(selectedWindow.Hwnd);
         }
 
         private void RegisterThumbnail(IntPtr targetHwnd)
@@ -281,91 +298,121 @@ namespace bws
             }
         }
 
-        public void CommitSelection()
+        private void IconBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isWorkspaceMode)
+            if (sender is Border border && border.DataContext is WindowItem clickedWindow)
             {
-                if (_workspaces.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _workspaces.Count)
+                // Find indices
+                for (int r = 0; r < _grid.Count; r++)
                 {
-                    var selected = _workspaces[_selectedIndex];
-                    HideSwitcher();
-                    WorkspaceManager.SwitchToWorkspace(selected.Id);
+                    for (int c = 0; c < _grid[r].Windows.Count; c++)
+                    {
+                        if (_grid[r].Windows[c] == clickedWindow)
+                        {
+                            _selectedRowIndex = r;
+                            _selectedColIndex = c;
+                            UpdateSelectionUI();
+                            CommitSelection(true); // Ignore sticky, user clicked directly
+                            return;
+                        }
+                    }
                 }
-                else
+            }
+        }
+
+        private void IconBorder_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle)
+            {
+                if (sender is Border border && border.DataContext is WindowItem clickedWindow)
                 {
-                    HideSwitcher();
+                    for (int r = 0; r < _grid.Count; r++)
+                    {
+                        for (int c = 0; c < _grid[r].Windows.Count; c++)
+                        {
+                            if (_grid[r].Windows[c] == clickedWindow)
+                            {
+                                _selectedRowIndex = r;
+                                _selectedColIndex = c;
+                                UpdateSelectionUI();
+                                CloseSelection();
+                                return;
+                            }
+                        }
+                    }
                 }
+            }
+        }
+
+
+        public void CommitSelection(bool ignoreSticky = false)
+        {
+            if (ignoreSticky || !_isStickyMode)
+            {
+                PerformSwitch();
+            }
+        }
+
+        private void PerformSwitch()
+        {
+            if (_grid.Count > 0 && _selectedRowIndex >= 0 && _selectedColIndex >= 0)
+            {
+                var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];
+                var targetDeskId = _grid[_selectedRowIndex].Workspace.Id;
+                var currentDeskId = WorkspaceManager.GetWorkspacesInMruOrder().FirstOrDefault(w => w.IsCurrent)?.Id;
+                
+                HideSwitcher();
+
+                if (currentDeskId != null && targetDeskId != currentDeskId)
+                {
+                    WorkspaceManager.SwitchToWorkspace(targetDeskId);
+                }
+                
+                Win32Interop.ForceForegroundWindow(selectedWindow.Hwnd);
             }
             else
             {
-                if (_windows.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _windows.Count)
-                {
-                    var selected = _windows[_selectedIndex];
-
-                    // Important: Hide the switcher FIRST so WPF doesn't steal focus back when it closes
-                    HideSwitcher();
-
-                    if (Win32Interop.IsWindowVisible(selected.Hwnd))
-                    {
-                        if (Win32Interop.IsIconic(selected.Hwnd))
-                        {
-                            Win32Interop.ShowWindow(selected.Hwnd, Win32Interop.SW_RESTORE);
-                        }
-                        
-                        // Alt key focus hack: simulates Alt press to force OS to allow focus steal
-                        Win32Interop.keybd_event(0x12, 0, 0, IntPtr.Zero); // 0x12 = VK_MENU (Alt)
-                        Win32Interop.keybd_event(0x12, 0, Win32Interop.KEYEVENTF_KEYUP, IntPtr.Zero);
-                        
-                        Win32Interop.SetForegroundWindow(selected.Hwnd);
-                    }
-                }
-                else
-                {
-                    HideSwitcher();
-                }
+                HideSwitcher();
             }
         }
 
         public void CloseSelection()
         {
-            if (_isWorkspaceMode)
+            if (_grid.Count > 0)
             {
-                // Closing a virtual desktop is visually complex to orchestrate smoothly from the switcher, 
-                // so we will just ignore it for now or implement COM destroy later if explicitly requested.
-                return;
-            }
-
-            if (_windows.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _windows.Count)
-            {
-                var selected = _windows[_selectedIndex];
+                var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];
                 
-                // Send graceful close request (like clicking the X button)
-                Win32Interop.SendMessage(selected.Hwnd, 0x0010 /* WM_CLOSE */, IntPtr.Zero, IntPtr.Zero);
+                Win32Interop.SendMessage(selectedWindow.Hwnd, 0x0010 /* WM_CLOSE */, IntPtr.Zero, IntPtr.Zero);
                 
-                // Remove it from our internal list immediately
-                _windows.RemoveAt(_selectedIndex);
+                var row = _grid[_selectedRowIndex];
+                row.Windows.RemoveAt(_selectedColIndex);
                 
-                // If there are no more windows, hide the switcher
-                if (_windows.Count == 0)
+                if (row.Windows.Count == 0)
+                {
+                    _grid.RemoveAt(_selectedRowIndex);
+                    if (_selectedRowIndex >= _grid.Count)
+                    {
+                        _selectedRowIndex = Math.Max(0, _grid.Count - 1);
+                    }
+                    _selectedColIndex = 0;
+                }
+                else
+                {
+                    if (_selectedColIndex >= row.Windows.Count)
+                    {
+                        _selectedColIndex = Math.Max(0, row.Windows.Count - 1);
+                    }
+                }
+                
+                if (_grid.Count == 0)
                 {
                     HideSwitcher();
                 }
                 else
                 {
-                    // Adjust selection index if we closed the last item in the list
-                    if (_selectedIndex >= _windows.Count)
-                    {
-                        _selectedIndex = _windows.Count - 1;
-                    }
-                    
-                    // Refresh the UI list
-                    IconList.ItemsSource = null;
-                    IconList.ItemsSource = _windows;
-                    
-                    // Force the template again to be safe
-                    IconList.ItemTemplate = (DataTemplate)this.Resources["WindowItemTemplate"];
-                    
-                    // Update the visual selection ring and thumbnail
+                    WorkspaceList.ItemsSource = null;
+                    WorkspaceList.ItemsSource = _grid;
+                    this.UpdateLayout();
                     UpdateSelectionUI();
                 }
             }
@@ -375,11 +422,10 @@ namespace bws
         {
             UnregisterThumbnail();
             this.Hide();
-            IconList.ItemsSource = null;
-            _windows.Clear();
-            _workspaces.Clear();
-            _isWorkspaceMode = false;
-            ThumbnailAnchor.Visibility = Visibility.Visible;
+            WorkspaceList.ItemsSource = null;
+            _grid.Clear();
+            _isStickyMode = false;
+            ThumbnailAnchor.Visibility = Visibility.Collapsed;
         }
     }
 

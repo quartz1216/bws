@@ -6,18 +6,22 @@ using System.Windows.Input;
 
 namespace bws
 {
+    public enum MoveDirection
+    {
+        Left, Right, Up, Down, Home, End, PageUp, PageDown
+    }
+
     public class KeyboardHook : IDisposable
     {
         private Win32Interop.LowLevelKeyboardProc _proc;
         private IntPtr _hookID = IntPtr.Zero;
 
-        public event EventHandler<bool>? AltTabPressed; // bool isShiftPressed
-        public event EventHandler<bool>? AltWPressed; // bool isShiftPressed (Alt + W)
+        public event EventHandler<bool>? AltTabOpen; // bool isSticky
         public event EventHandler? AltReleased;
         public event EventHandler? EnterPressed;
         public event EventHandler? EscPressed;
         public event EventHandler? QPressed;
-        public event EventHandler<bool>? ArrowKeyPressed; // bool isLeft
+        public event EventHandler<MoveDirection>? DirectionKeyPressed;
 
         public Func<bool>? IsSwitcherActive { get; set; }
 
@@ -47,39 +51,74 @@ namespace bws
                     bool isShiftPressed = (Win32Interop.GetAsyncKeyState(Win32Interop.VK_LSHIFT) & 0x8000) != 0 ||
                                         (Win32Interop.GetAsyncKeyState(Win32Interop.VK_RSHIFT) & 0x8000) != 0;
 
-                    if (isAltPressed)
-                    {
-                        Console.WriteLine($"[Hook] Raw Key Event -> Alt is Down. vkCode: {vkCode:X2} ({(System.Windows.Forms.Keys)vkCode})");
-                    }
+                    bool isCtrlPressed = (Win32Interop.GetAsyncKeyState(Win32Interop.VK_LCONTROL) & 0x8000) != 0 ||
+                                         (Win32Interop.GetAsyncKeyState(Win32Interop.VK_RCONTROL) & 0x8000) != 0;
 
-                    if (vkCode == Win32Interop.VK_TAB && isAltPressed)
+                    bool isActive = IsSwitcherActive != null && IsSwitcherActive();
+
+                    if (!isActive)
                     {
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        if (vkCode == Win32Interop.VK_TAB && isAltPressed)
                         {
-                            AltTabPressed?.Invoke(this, isShiftPressed);
-                        });
-                        return (IntPtr)1;
+                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                AltTabOpen?.Invoke(this, isCtrlPressed);
+                            });
+                            return (IntPtr)1;
+                        }
                     }
-
-                    if (vkCode == 0x57 && isAltPressed) // VK_W (W key)
+                    else
                     {
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        MoveDirection? dir = null;
+
+                        if (vkCode == Win32Interop.VK_TAB)
                         {
-                            try
-                            {
-                                AltWPressed?.Invoke(this, isShiftPressed);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"[Hook] Exception in AltWPressed: {ex}");
-                            }
-                        });
-                        return (IntPtr)1;
-                    }
+                            dir = isShiftPressed ? MoveDirection.Left : MoveDirection.Right;
+                        }
+                        else if (vkCode == 0x44 || vkCode == 0x4C || vkCode == Win32Interop.VK_RIGHT) // D, L or Right
+                        {
+                            dir = MoveDirection.Right;
+                        }
+                        else if (vkCode == 0x41 || vkCode == 0x48 || vkCode == Win32Interop.VK_LEFT) // A, H or Left
+                        {
+                            dir = MoveDirection.Left;
+                        }
+                        else if (vkCode == 0xC0) // Grave (`)
+                        {
+                            dir = isShiftPressed ? MoveDirection.Up : MoveDirection.Down;
+                        }
+                        else if (vkCode == 0x53 || vkCode == 0x4A || vkCode == Win32Interop.VK_DOWN) // S, J or Down
+                        {
+                            dir = MoveDirection.Down;
+                        }
+                        else if (vkCode == 0x57 || vkCode == 0x4B || vkCode == Win32Interop.VK_UP) // W, K or Up
+                        {
+                            dir = MoveDirection.Up;
+                        }
+                        else if (vkCode == 0x24) // Home
+                        {
+                            dir = MoveDirection.Home;
+                        }
+                        else if (vkCode == 0x23) // End
+                        {
+                            dir = MoveDirection.End;
+                        }
+                        else if (vkCode == 0x21) // Page Up
+                        {
+                            dir = MoveDirection.PageUp;
+                        }
+                        else if (vkCode == 0x22) // Page Down
+                        {
+                            dir = MoveDirection.PageDown;
+                        }
 
-                    if (IsSwitcherActive != null && IsSwitcherActive())
-                    {
-                        if (vkCode == 0x0D) // VK_RETURN
+                        if (dir != null)
+                        {
+                            System.Windows.Application.Current.Dispatcher.Invoke(() => DirectionKeyPressed?.Invoke(this, dir.Value));
+                            return (IntPtr)1;
+                        }
+
+                        if (vkCode == 0x0D || vkCode == 0x20) // Enter or Space
                         {
                             System.Windows.Application.Current.Dispatcher.Invoke(() => EnterPressed?.Invoke(this, EventArgs.Empty));
                             return (IntPtr)1;
@@ -89,20 +128,16 @@ namespace bws
                             System.Windows.Application.Current.Dispatcher.Invoke(() => EscPressed?.Invoke(this, EventArgs.Empty));
                             return (IntPtr)1;
                         }
-                        if (vkCode == 0x51) // VK_Q (Q key)
+                        if (vkCode == 0x51) // Q
                         {
                             System.Windows.Application.Current.Dispatcher.Invoke(() => QPressed?.Invoke(this, EventArgs.Empty));
                             return (IntPtr)1;
                         }
-                        if (vkCode == 0x25) // VK_LEFT
+
+                        // Block other typing keys while switcher is active to prevent typing into background apps
+                        if (vkCode >= 0x41 && vkCode <= 0x5A) // A-Z
                         {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() => ArrowKeyPressed?.Invoke(this, true));
-                            return (IntPtr)1;
-                        }
-                        if (vkCode == 0x27) // VK_RIGHT
-                        {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() => ArrowKeyPressed?.Invoke(this, false));
-                            return (IntPtr)1;
+                            return (IntPtr)1; 
                         }
                     }
                 }

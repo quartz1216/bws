@@ -26,6 +26,7 @@ namespace bws
         public static bool ShowAllWindows { get; set; } = false;
 
         private static HashSet<string> _blacklist = new(StringComparer.OrdinalIgnoreCase);
+        private static Dictionary<IntPtr, BitmapSource> _iconCache = new();
         private static List<IntPtr> _mruList = new List<IntPtr>();
         private static Win32Interop.WinEventDelegate? _winEventDelegate;
         private static IntPtr _hWinEventHook = IntPtr.Zero;
@@ -228,6 +229,35 @@ namespace bws
 
         private static BitmapSource? GetWindowIcon(IntPtr hWnd)
         {
+            // Check cache first (covers cloaked UWP windows on other desktops)
+            if (_iconCache.TryGetValue(hWnd, out var cachedIcon))
+            {
+                return cachedIcon;
+            }
+
+            var result = GetWindowIconInternal(hWnd);
+
+            // Cache the result if we got an icon
+            if (result != null)
+            {
+                _iconCache[hWnd] = result;
+            }
+
+            // Periodically clean cache of dead window handles
+            if (_iconCache.Count > 100)
+            {
+                var deadHandles = _iconCache.Keys
+                    .Where(h => !Win32Interop.IsWindowVisible(h))
+                    .ToList();
+                foreach (var h in deadHandles)
+                    _iconCache.Remove(h);
+            }
+
+            return result;
+        }
+
+        private static BitmapSource? GetWindowIconInternal(IntPtr hWnd)
+        {
             // 0. Try modern Shell API first (catches UWP and modern apps)
             try
             {
@@ -239,6 +269,7 @@ namespace bws
                     Win32Interop.GetClassName(hWnd, sbClass, sbClass.Capacity);
                     if (sbClass.ToString() == "ApplicationFrameWindow")
                     {
+                        // Try child window enumeration first (works for UWP on current desktop)
                         string childProcAumid = "";
                         Win32Interop.EnumChildWindows(hWnd, (childHwnd, lParam) => {
                             Win32Interop.GetWindowThreadProcessId(childHwnd, out uint cPid);
@@ -250,6 +281,14 @@ namespace bws
                             return true;
                         }, IntPtr.Zero);
                         aumid = childProcAumid;
+
+                        // Fallback: for cloaked UWP on other desktops, child windows may not be accessible.
+                        // Try getting AUMID from the window's own process (ApplicationFrameHost)
+                        if (string.IsNullOrEmpty(aumid))
+                        {
+                            Win32Interop.GetWindowThreadProcessId(hWnd, out uint hostPid);
+                            aumid = Win32Interop.GetAumidFromProcess(hostPid);
+                        }
                     }
                 }
 
@@ -296,9 +335,8 @@ namespace bws
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.IO.File.AppendAllText(@"C:\tmp\bws_icon_error.log", $"[BWS DEBUG] UWP Icon Load Failed: {ex.ToString()} {Environment.NewLine}");
                 // Fallback to Win32 if ShellObject fails or doesn't have an AUMID
             }
 

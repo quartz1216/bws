@@ -16,11 +16,18 @@ namespace bws
         public const int WM_SYSKEYUP = 0x0105;
 
         public const int VK_TAB = 0x09;
-        public const int VK_LMENU = 0xA4;
-        public const int VK_RMENU = 0xA5;
+        public const int VK_ESCAPE = 0x1B;
         public const int VK_LSHIFT = 0xA0;
         public const int VK_RSHIFT = 0xA1;
-        public const int VK_ESCAPE = 0x1B;
+        public const int VK_LCONTROL = 0xA2;
+        public const int VK_RCONTROL = 0xA3;
+        public const int VK_LMENU = 0xA4;
+        public const int VK_RMENU = 0xA5;
+
+        public const int VK_LEFT = 0x25;
+        public const int VK_UP = 0x26;
+        public const int VK_RIGHT = 0x27;
+        public const int VK_DOWN = 0x28;
 
         public const int GWL_STYLE = -16;
         public const int GWL_EXSTYLE = -20;
@@ -284,6 +291,41 @@ namespace bws
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool AttachThreadInput(int idAttach, int idAttachTo, bool fAttach);
+
+        [DllImport("kernel32.dll")]
+        public static extern int GetCurrentThreadId();
+
+        public static void ForceForegroundWindow(IntPtr hWnd)
+        {
+            // Dummy Alt key press/release to help bypass foreground lock
+            keybd_event((byte)VK_LMENU, 0, 0, IntPtr.Zero);
+            keybd_event((byte)VK_LMENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+
+            int foregroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), out _);
+            int currentThreadId = GetCurrentThreadId();
+
+            if (foregroundThreadId != currentThreadId && foregroundThreadId != 0)
+            {
+                AttachThreadInput(currentThreadId, foregroundThreadId, true);
+                if (IsIconic(hWnd))
+                {
+                    ShowWindow(hWnd, SW_RESTORE);
+                }
+                SetForegroundWindow(hWnd);
+                AttachThreadInput(currentThreadId, foregroundThreadId, false);
+            }
+            else
+            {
+                if (IsIconic(hWnd))
+                {
+                    ShowWindow(hWnd, SW_RESTORE);
+                }
+                SetForegroundWindow(hWnd);
+            }
+        }
 
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);

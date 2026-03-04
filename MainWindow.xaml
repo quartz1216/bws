@@ -14,84 +14,186 @@
         KeyUp="Window_KeyUp">
 
     <Window.Resources>
-        <!-- Template for Window Mode (Alt+Tab) -->
-        <DataTemplate x:Key="WindowItemTemplate">
-            <Border x:Name="IconBorder" Background="Transparent" CornerRadius="6" Margin="6,0" Padding="8" Width="64" Height="64">
-                <Image Source="{Binding Icon}" Stretch="Uniform" />
-            </Border>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                    <Setter TargetName="IconBorder" Property="Background" Value="#66FFFFFF" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
+        <!-- Fluent Design System Colors (Windows 11 Dark Theme) -->
+        <!-- Background layers -->
+        <Color x:Key="AcrylicBackgroundColor">#FF202020</Color>  <!-- Opaque dark -->
+        <Color x:Key="CardBackgroundColor">#14FFFFFF</Color>      <!-- Subtle card fill -->
+        <Color x:Key="CardBackgroundHoverColor">#1AFFFFFF</Color>
+        
+        <!-- Text colors -->
+        <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#C5FFFFFF"/>
+        <SolidColorBrush x:Key="TextTertiary" Color="#87FFFFFF"/>
 
-        <!-- Template for Workspace Mode (Alt+Esc) -->
-        <DataTemplate x:Key="WorkspaceItemTemplate">
-            <Border x:Name="IconBorder" Background="Transparent" CornerRadius="6" Margin="6,0" Padding="8" Width="180" Height="64">
-                <Grid>
-                    <!-- Workspace Icon Placeholder -->
-                    <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="White" Opacity="0.7"/>
-                    <!-- Workspace Name -->
-                    <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" />
-                </Grid>
-            </Border>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                    <Setter TargetName="IconBorder" Property="Background" Value="#66FFFFFF" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
+        <!-- Accent (Windows 11 default blue) -->
+        <Color x:Key="AccentColor">#60CDFF</Color>
+        <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF"/>
+        <Color x:Key="AccentLightColor">#99EBFF</Color>
+        
+        <!-- Stroke -->
+        <SolidColorBrush x:Key="CardStroke" Color="#12FFFFFF"/>
+        <SolidColorBrush x:Key="DividerStroke" Color="#15FFFFFF"/>
+
+        <!-- Fluent Font -->
+        <FontFamily x:Key="FluentFont">Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
+
+        <!-- Fluent Thin Scrollbar -->
+        <Style x:Key="FluentScrollBarThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="#44FFFFFF" CornerRadius="2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Width" Value="4"/>
+            <Setter Property="MinWidth" Value="4"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource FluentScrollBarThumb}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="Height" Value="4"/>
+                    <Setter Property="MinHeight" Value="4"/>
+                    <Setter Property="Margin" Value="0,2,0,0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Track x:Name="PART_Track">
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource FluentScrollBarThumb}"/>
+                                    </Track.Thumb>
+                                </Track>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-        <!-- Floating Backplate (ZaButon) -->
-        <Border Background="#E61A1A1A" CornerRadius="24" Padding="40,30,40,30">
+        <!-- Main Flyout Surface - Mica-like acrylic panel -->
+        <Border CornerRadius="8" Padding="24,20,24,20" Margin="40">
+            <Border.Background>
+                <SolidColorBrush Color="{StaticResource AcrylicBackgroundColor}"/>
+            </Border.Background>
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#18FFFFFF"/>
+            </Border.BorderBrush>
+            <Border.BorderThickness>1</Border.BorderThickness>
             <Border.Effect>
-                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="10" Opacity="0.5" />
+                <DropShadowEffect Color="#000000" BlurRadius="32" ShadowDepth="8" Opacity="0.42" Direction="270"/>
             </Border.Effect>
             
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /> <!-- Title Area -->
-                    <RowDefinition Height="Auto" /> <!-- Thumbnail Preview Area -->
-                    <RowDefinition Height="Auto" /> <!-- Icon List Strip -->
+                    <RowDefinition Height="Auto" /> <!-- Title -->
+                    <RowDefinition Height="Auto" /> <!-- Thumbnail Preview -->
+                    <RowDefinition Height="*" />     <!-- Icon Strip (fills remaining space) -->
                 </Grid.RowDefinitions>
 
-                <!-- Dynamic Title of hovered window above the thumbnails -->
+                <!-- Window Title -->
                 <TextBlock x:Name="ActiveWindowText" 
                            Grid.Row="0" 
                            HorizontalAlignment="Center" 
-                           Margin="0,0,0,15" 
-                           FontSize="18" 
-                           FontWeight="SemiBold" 
-                           Foreground="White" 
-                           Effect="{DynamicResource DropShadowEffect}" />
+                           Margin="0,0,0,12" 
+                           FontSize="14" 
+                           FontWeight="Normal" 
+                           FontFamily="{StaticResource FluentFont}"
+                           Foreground="{StaticResource TextPrimary}"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="600"/>
 
-                <!-- Border acting as the anchor for the DWM Thumbnail -->
+                <!-- DWM Thumbnail Anchor -->
                 <Border x:Name="ThumbnailAnchor" 
                         Grid.Row="1" 
                         HorizontalAlignment="Center" 
                         VerticalAlignment="Center" 
                         Width="600" Height="360" 
-                        Margin="0,0,0,30" 
-                        Background="Transparent" />
+                        Margin="0,0,0,16" 
+                        CornerRadius="4"
+                        Background="Transparent"/>
 
-                <!-- Horizontal scroll area for app icons -->
-                <Border Grid.Row="2" Background="#44FFFFFF" CornerRadius="12" Padding="12" HorizontalAlignment="Center">
-                    <ItemsControl x:Name="IconList">
+                <!-- Workspace Rows -->
+                <Border Grid.Row="2" CornerRadius="6" Padding="8" HorizontalAlignment="Center">
+                    <Border.Background>
+                        <SolidColorBrush Color="{StaticResource CardBackgroundColor}"/>
+                    </Border.Background>
+                    <Border.BorderBrush>
+                        <StaticResource ResourceKey="CardStroke"/>
+                    </Border.BorderBrush>
+                    <Border.BorderThickness>1</Border.BorderThickness>
+
+                    <ScrollViewer x:Name="WorkspaceScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="400">
+                    <ItemsControl x:Name="WorkspaceList">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <VirtualizingStackPanel Orientation="Horizontal" />
+                                <StackPanel Orientation="Vertical" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <!-- Workspace Label (fixed, never scrolls) -->
+                                    <TextBlock Text="{Binding Workspace.Name}" 
+                                               Width="90" 
+                                               Foreground="{StaticResource TextTertiary}" 
+                                               VerticalAlignment="Center" 
+                                               TextAlignment="Right" 
+                                               Margin="0,0,12,0" 
+                                               FontSize="12" 
+                                               FontWeight="Normal"
+                                               FontFamily="{StaticResource FluentFont}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <!-- Window Icons (scrolls horizontally per row) -->
+                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxWidth="800">
+                                        <ItemsControl ItemsSource="{Binding Windows}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Name="IconBorder" 
+                                                            Background="Transparent" 
+                                                            CornerRadius="4" 
+                                                            Margin="3,0" 
+                                                            Padding="8" 
+                                                            Width="56" Height="56"
+                                                            BorderThickness="0"
+                                                            MouseLeftButtonUp="IconBorder_MouseLeftButtonUp"
+                                                            MouseDown="IconBorder_MouseDown">
+                                                        <Image Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </ScrollViewer>
                 </Border>
             </Grid>
         </Border>
-
-        <Grid.Resources>
-            <DropShadowEffect x:Key="DropShadowEffect" Color="Black" BlurRadius="10" ShadowDepth="0" Opacity="0.8" />
-        </Grid.Resources>
     </Grid>
 </Window>
