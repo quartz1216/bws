@@ -56,8 +56,10 @@ namespace bws
             
             _notifyIcon.ContextMenuStrip = contextMenu;
 
-            // Initialize MainWindow
+            // Initialize MainWindow forcing HWND creation
             _mainWindow = new MainWindow();
+            _mainWindow.Show();
+            _mainWindow.Hide();
             
             // Initialize Tracking Managers
             WindowManager.InitializeMruTracking();

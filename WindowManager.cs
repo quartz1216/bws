@@ -368,7 +368,6 @@ namespace bws
                         IntPtr.Zero,
                         System.Windows.Int32Rect.Empty,
                         BitmapSizeOptions.FromEmptyOptions());
-                    
                     source.Freeze();
                     return source;
                 }
@@ -377,6 +376,42 @@ namespace bws
                     // Fallback or ignore
                 }
             }
+
+            // 5. Final Fallback: Try extracting the default icon from the executable file itself
+            try
+            {
+                Win32Interop.GetWindowThreadProcessId(hWnd, out uint processId);
+                var processHandle = Win32Interop.OpenProcess(0x0400 | 0x0010, false, processId);
+                if (processHandle != IntPtr.Zero)
+                {
+                    StringBuilder sb = new StringBuilder(1024);
+                    int capacity = sb.Capacity;
+                    if (Win32Interop.QueryFullProcessImageName(processHandle, 0, sb, ref capacity))
+                    {
+                        string exePath = sb.ToString();
+                        var exeIcon = Icon.ExtractAssociatedIcon(exePath);
+                        if (exeIcon != null)
+                        {
+                            var bitmap = exeIcon.ToBitmap();
+                            var source = Imaging.CreateBitmapSourceFromHBitmap(
+                                bitmap.GetHbitmap(),
+                                IntPtr.Zero,
+                                System.Windows.Int32Rect.Empty,
+                                BitmapSizeOptions.FromEmptyOptions());
+                            
+                            source.Freeze();
+                            Win32Interop.CloseHandle(processHandle);
+                            return source;
+                        }
+                    }
+                    Win32Interop.CloseHandle(processHandle);
+                }
+            }
+            catch
+            {
+                // Everything failed
+            }
+
             return null;
         }
     }

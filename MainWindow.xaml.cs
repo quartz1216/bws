@@ -97,7 +97,14 @@ namespace bws
             this.UpdateLayout();
             UpdateSelectionUI();
 
+            // Force the window to the primary monitor
+            this.WindowState = WindowState.Normal;
+            this.Left = 0;
+            this.Top = 0;
+            this.WindowState = WindowState.Maximized;
+
             this.Show();
+            this.Activate();
         }
 
         public void MoveSelection(MoveDirection dir)
@@ -188,14 +195,17 @@ namespace bws
                         {
                             border.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
                         }
+
+                        // Auto-scroll horizontally and vertically after layout completes
+                        var capturedCol = colContainer;
+                        var capturedRow = rowContainer;
+                        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+                        {
+                            capturedRow?.BringIntoView();
+                            capturedCol?.BringIntoView();
+                        }));
                     }
                 }
-                // Auto-scroll after layout completes
-                var capturedRow = rowContainer;
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
-                {
-                    capturedRow?.BringIntoView();
-                }));
             }
 
             var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];

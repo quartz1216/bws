@@ -1,0 +1,2 @@
+E:\Home\Projects\bws\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\bws.pdb
+E:\Home\Projects\bws\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\bws.exe

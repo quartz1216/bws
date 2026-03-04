@@ -5,7 +5,7 @@
         WindowStyle="None" 
         AllowsTransparency="True" 
         Background="Transparent"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         WindowState="Maximized"
         Topmost="True"
         ShowInTaskbar="False"
