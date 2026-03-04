@@ -1,0 +1,25 @@
+# Visual Studio / .NET Core
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Publish / Distribution
+*.zip
+*.msi
+*.exe.config
+publish/
+
+# Local App Settings
+appsettings.json
+
+# Rider / Resharper
+.idea/
+*.ReSharper
+
+# OS generated files
+.DS_Store
+Thumbs.db

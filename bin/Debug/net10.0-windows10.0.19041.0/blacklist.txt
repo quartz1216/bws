@@ -1,2 +1,0 @@
-# Add process names here to exclude them from the Alternative Tab Switcher (e.g. TextInputHost.exe, PhoneExperienceHost.exe)
-TextInputHost.exe
