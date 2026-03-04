@@ -1,3 +1,4 @@
+#nullable disable
 // Author: Markus Scholtes, 2025
 // Version 1.21, 2025-08-11
 // Version for Windows 11 24H2 Insider

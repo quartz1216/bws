@@ -454,9 +454,12 @@ namespace bws
                         yield return (T)child;
                     }
 
-                    foreach (T childOfChild in FindVisualChildren<T>(child))
+                    if (child != null)
                     {
-                        yield return childOfChild;
+                        foreach (T childOfChild in FindVisualChildren<T>(child))
+                        {
+                            yield return childOfChild;
+                        }
                     }
                 }
             }
