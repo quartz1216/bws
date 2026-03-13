@@ -24,6 +24,9 @@ namespace bws
         public event EventHandler<MoveDirection>? DirectionKeyPressed;
 
         public Func<bool>? IsSwitcherActive { get; set; }
+        
+        public static bool UseMetaKeyShortcuts { get; set; } = false;
+        private bool _suppressNextWinKeyUp = false;
 
         public KeyboardHook()
         {
@@ -54,6 +57,9 @@ namespace bws
                     bool isCtrlPressed = (Win32Interop.GetAsyncKeyState(Win32Interop.VK_LCONTROL) & 0x8000) != 0 ||
                                          (Win32Interop.GetAsyncKeyState(Win32Interop.VK_RCONTROL) & 0x8000) != 0;
 
+                    bool isMetaPressed = UseMetaKeyShortcuts && ((Win32Interop.GetAsyncKeyState(0x5B) & 0x8000) != 0 ||
+                                         (Win32Interop.GetAsyncKeyState(0x5C) & 0x8000) != 0);
+
                     bool isActive = IsSwitcherActive != null && IsSwitcherActive();
 
                     if (!isActive)
@@ -66,6 +72,29 @@ namespace bws
                             });
                             return (IntPtr)1;
                         }
+                        
+                        if (UseMetaKeyShortcuts && isMetaPressed)
+                        {
+                            MoveDirection? initialDir = null;
+                            if (vkCode == 0x44 || vkCode == 0x4C) initialDir = MoveDirection.Right; // D, L
+                            else if (vkCode == 0x41 || vkCode == 0x48) initialDir = MoveDirection.Left; // A, H
+                            else if (vkCode == 0x57 || vkCode == 0x4B) initialDir = MoveDirection.Up; // W, K
+                            else if ((vkCode == 0x53 || vkCode == 0x4A) && !isShiftPressed) initialDir = MoveDirection.Down; // S, J (Exclude Shift+S for Snipping Tool)
+
+                            if (initialDir != null)
+                            {
+                                _suppressNextWinKeyUp = true;
+                                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    AltTabOpen?.Invoke(this, false);
+                                    if (initialDir != MoveDirection.Right)
+                                    {
+                                        DirectionKeyPressed?.Invoke(this, initialDir.Value);
+                                    }
+                                });
+                                return (IntPtr)1;
+                            }
+                        }
                     }
                     else
                     {
@@ -77,22 +106,26 @@ namespace bws
                         }
                         else if (vkCode == 0x44 || vkCode == 0x4C || vkCode == Win32Interop.VK_RIGHT) // D, L or Right
                         {
+                            if (vkCode != Win32Interop.VK_RIGHT && isMetaPressed) _suppressNextWinKeyUp = true;
                             dir = MoveDirection.Right;
                         }
                         else if (vkCode == 0x41 || vkCode == 0x48 || vkCode == Win32Interop.VK_LEFT) // A, H or Left
                         {
+                            if (vkCode != Win32Interop.VK_LEFT && isMetaPressed) _suppressNextWinKeyUp = true;
                             dir = MoveDirection.Left;
                         }
                         else if (vkCode == 0xC0) // Grave (`)
                         {
                             dir = isShiftPressed ? MoveDirection.Up : MoveDirection.Down;
                         }
-                        else if (vkCode == 0x53 || vkCode == 0x4A || vkCode == Win32Interop.VK_DOWN) // S, J or Down
+                        else if ((vkCode == 0x53 || vkCode == 0x4A) && !isShiftPressed || vkCode == Win32Interop.VK_DOWN) // S, J or Down
                         {
+                            if (vkCode != Win32Interop.VK_DOWN && isMetaPressed) _suppressNextWinKeyUp = true;
                             dir = MoveDirection.Down;
                         }
                         else if (vkCode == 0x57 || vkCode == 0x4B || vkCode == Win32Interop.VK_UP) // W, K or Up
                         {
+                            if (vkCode != Win32Interop.VK_UP && isMetaPressed) _suppressNextWinKeyUp = true;
                             dir = MoveDirection.Up;
                         }
                         else if (vkCode == 0x24) // Home
@@ -149,6 +182,26 @@ namespace bws
                         {
                             AltReleased?.Invoke(this, EventArgs.Empty);
                         });
+                    }
+                    
+                    if (vkCode == 0x5B || vkCode == 0x5C) // LWIN or RWIN
+                    {
+                        if (UseMetaKeyShortcuts && IsSwitcherActive != null && IsSwitcherActive())
+                        {
+                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                AltReleased?.Invoke(this, EventArgs.Empty);
+                            });
+                        }
+                        
+                        if (_suppressNextWinKeyUp)
+                        {
+                            _suppressNextWinKeyUp = false;
+                            
+                            // To suppress the start menu, inject a dummy keystroke
+                            Win32Interop.keybd_event(0xE8, 0, 0, IntPtr.Zero);
+                            Win32Interop.keybd_event(0xE8, 0, Win32Interop.KEYEVENTF_KEYUP, IntPtr.Zero);
+                        }
                     }
                 }
             }
