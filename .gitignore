@@ -12,6 +12,7 @@ obj/
 *.msi
 *.exe.config
 publish/
+InstallerOutput/
 
 # Local App Settings
 appsettings.json

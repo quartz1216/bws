@@ -32,8 +32,15 @@ namespace bws
             
             try 
             {
-                var iconPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(iconPath);
+                var iconPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrEmpty(iconPath))
+                {
+                    _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(iconPath);
+                }
+                else
+                {
+                    _notifyIcon.Icon = SystemIcons.Application;
+                }
             }
             catch 
             {
