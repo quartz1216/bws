@@ -22,6 +22,7 @@ namespace bws
         private int _selectedColIndex = 0;
         private bool _isStickyMode = false;
         private IntPtr _thumbnailId = IntPtr.Zero;
+        private long _operationId = 0;
 
         public bool IsSwitcherActive => _grid.Count > 0;
 
@@ -46,7 +47,9 @@ namespace bws
 
         public void ShowSwitcher(bool isSticky)
         {
-            if (this.IsVisible) return;
+            long currentOpId = unchecked(++_operationId);
+
+            if (this.IsVisible && this.Opacity == 1.0) return;
 
             _isStickyMode = isSticky;
             
@@ -117,16 +120,17 @@ namespace bws
             this.Top = 0;
             this.WindowState = WindowState.Maximized;
 
-            // Prevent previous frame from flashing
-            this.Opacity = 0;
-
+            // Ensure window is shown immediately (it is completely transparent from previous HideSwitcher)
             this.Show();
             this.Activate();
 
-            // Restore visibility after rendering the new layout
+            // Once the new grid layout data is bound and measured, fade it in (restore opacity)
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
             {
-                this.Opacity = 1;
+                if (_operationId == currentOpId)
+                {
+                    this.Opacity = 1;
+                }
             }));
         }
 
@@ -453,12 +457,30 @@ namespace bws
 
         public void HideSwitcher()
         {
-            UnregisterThumbnail();
-            this.Hide();
+            long currentOpId = unchecked(++_operationId);
+
+            if (!this.IsVisible) return;
+
+            // Instantly clear the UI elements so the next painted frame is empty
             WorkspaceList.ItemsSource = null;
             _grid.Clear();
             _isStickyMode = false;
             ThumbnailAnchor.Visibility = Visibility.Collapsed;
+
+            // Turn transparent to hide the background flyout surface immediately
+            this.Opacity = 0;
+
+            // Wait for WPF to actually render this empty/transparent frame.
+            // When DWM captures the window surface, it will capture nothing.
+            // Then we can safely unregister the thumbnail and hide the window natively.
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                if (_operationId == currentOpId)
+                {
+                    UnregisterThumbnail();
+                    this.Hide();
+                }
+            }));
         }
 
         private void WindowBackground_MouseDown(object sender, MouseButtonEventArgs e)
