@@ -130,6 +130,13 @@ namespace bws
                 if (_operationId == currentOpId)
                 {
                     this.Opacity = 1;
+
+                    // Now that the UI is visible, we can safely register and show the DWM thumbnail
+                    if (_grid.Count > 0 && _selectedRowIndex >= 0 && _selectedColIndex >= 0)
+                    {
+                        var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];
+                        RegisterThumbnail(selectedWindow.Hwnd);
+                    }
                 }
             }));
         }
@@ -237,7 +244,13 @@ namespace bws
 
             var selectedWindow = _grid[_selectedRowIndex].Windows[_selectedColIndex];
             ActiveWindowText.Text = selectedWindow.Title;
-            RegisterThumbnail(selectedWindow.Hwnd);
+
+            // Only register the thumbnail immediately if the UI is already fully visible (e.g. during MoveSelection).
+            // If the UI is currently hidden (Opacity = 0), ShowSwitcher will register the thumbnail later when fading in.
+            if (this.Opacity == 1.0)
+            {
+                RegisterThumbnail(selectedWindow.Hwnd);
+            }
         }
 
         private void RegisterThumbnail(IntPtr targetHwnd)
@@ -467,17 +480,19 @@ namespace bws
             _isStickyMode = false;
             ThumbnailAnchor.Visibility = Visibility.Collapsed;
 
+            // Instantly unregister the thumbnail so it disappears synchronously with the UI turning transparent
+            UnregisterThumbnail();
+
             // Turn transparent to hide the background flyout surface immediately
             this.Opacity = 0;
 
             // Wait for WPF to actually render this empty/transparent frame.
             // When DWM captures the window surface, it will capture nothing.
-            // Then we can safely unregister the thumbnail and hide the window natively.
+            // Then we can safely hide the window natively.
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
             {
                 if (_operationId == currentOpId)
                 {
-                    UnregisterThumbnail();
                     this.Hide();
                 }
             }));
