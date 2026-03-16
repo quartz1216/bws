@@ -117,8 +117,17 @@ namespace bws
             this.Top = 0;
             this.WindowState = WindowState.Maximized;
 
+            // Prevent previous frame from flashing
+            this.Opacity = 0;
+
             this.Show();
             this.Activate();
+
+            // Restore visibility after rendering the new layout
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+            {
+                this.Opacity = 1;
+            }));
         }
 
         public void MoveSelection(MoveDirection dir)
