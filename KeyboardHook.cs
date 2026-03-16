@@ -16,7 +16,7 @@ namespace bws
         private Win32Interop.LowLevelKeyboardProc _proc;
         private IntPtr _hookID = IntPtr.Zero;
 
-        public event EventHandler<bool>? AltTabOpen; // bool isSticky
+        public event EventHandler<(bool isSticky, MoveDirection? initialDir)>? AltTabOpen;
         public event EventHandler? AltReleased;
         public event EventHandler? EnterPressed;
         public event EventHandler? EscPressed;
@@ -68,11 +68,21 @@ namespace bws
                         {
                             System.Windows.Application.Current.Dispatcher.Invoke(() =>
                             {
-                                AltTabOpen?.Invoke(this, isCtrlPressed);
+                                AltTabOpen?.Invoke(this, (isCtrlPressed, null));
                             });
                             return (IntPtr)1;
                         }
-                        
+
+                        if (vkCode == 0xC0 && isAltPressed) // Alt + ` (Grave)
+                        {
+                            MoveDirection initialDir = isShiftPressed ? MoveDirection.Up : MoveDirection.Down;
+                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                AltTabOpen?.Invoke(this, (isCtrlPressed, initialDir));
+                            });
+                            return (IntPtr)1;
+                        }
+
                         if (UseMetaKeyShortcuts && isMetaPressed)
                         {
                             MoveDirection? initialDir = null;
@@ -86,11 +96,7 @@ namespace bws
                                 _suppressNextWinKeyUp = true;
                                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    AltTabOpen?.Invoke(this, false);
-                                    if (initialDir != MoveDirection.Right)
-                                    {
-                                        DirectionKeyPressed?.Invoke(this, initialDir.Value);
-                                    }
+                                    AltTabOpen?.Invoke(this, (false, initialDir != MoveDirection.Right ? initialDir : null));
                                 });
                                 return (IntPtr)1;
                             }

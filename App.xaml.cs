@@ -91,11 +91,15 @@ namespace bws
             }
         }
 
-        private void KeyboardHook_AltTabOpen(object? sender, bool isSticky)
+        private void KeyboardHook_AltTabOpen(object? sender, (bool isSticky, MoveDirection? initialDir) args)
         {
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                _mainWindow?.ShowSwitcher(isSticky);
+                _mainWindow?.ShowSwitcher(args.isSticky);
+                if (args.initialDir.HasValue)
+                {
+                    _mainWindow?.MoveSelection(args.initialDir.Value);
+                }
             }));
         }
 
