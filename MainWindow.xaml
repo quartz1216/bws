@@ -88,9 +88,10 @@
         </Style>
     </Window.Resources>
 
-    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#01000000" MouseLeftButtonDown="WindowBackground_MouseDown">
+        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
         <!-- Main Flyout Surface - Mica-like acrylic panel -->
-        <Border CornerRadius="8" Padding="24,20,24,20" Margin="40">
+        <Border x:Name="MainPanel" CornerRadius="8" Padding="24,20,24,20" Margin="40">
             <Border.Background>
                 <SolidColorBrush Color="{StaticResource AcrylicBackgroundColor}"/>
             </Border.Background>
@@ -195,5 +196,6 @@
                 </Border>
             </Grid>
         </Border>
+        </Grid>
     </Grid>
 </Window>

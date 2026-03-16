@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -54,9 +54,7 @@ namespace bws
             var allWindows = WindowManager.GetOpenWindows();
             allWindows.RemoveAll(w => w.Hwnd == new WindowInteropHelper(this).Handle);
             
-            // Remove the currently active (foreground) window - user is switching AWAY from it
             IntPtr foregroundHwnd = Win32Interop.GetForegroundWindow();
-            allWindows.RemoveAll(w => w.Hwnd == foregroundHwnd);
 
             _grid.Clear();
 
@@ -78,6 +76,22 @@ namespace bws
                 else if (_grid.Count > 0)
                 {
                     _grid[0].Windows.Add(win);
+                }
+            }
+
+            // Move the foreground window to the end of the list, but only if it's in the current active workspace
+            var currentWorkspace = workspaces.FirstOrDefault(w => w.IsCurrent);
+            if (currentWorkspace != null)
+            {
+                var currentRow = _grid.FirstOrDefault(r => r.Workspace.Id == currentWorkspace.Id);
+                if (currentRow != null)
+                {
+                    var fgWin = currentRow.Windows.FirstOrDefault(w => w.Hwnd == foregroundHwnd);
+                    if (fgWin != null)
+                    {
+                        currentRow.Windows.Remove(fgWin);
+                        currentRow.Windows.Add(fgWin);
+                    }
                 }
             }
 
@@ -436,6 +450,15 @@ namespace bws
             _grid.Clear();
             _isStickyMode = false;
             ThumbnailAnchor.Visibility = Visibility.Collapsed;
+        }
+
+        private void WindowBackground_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(MainPanel);
+            if (pos.X < 0 || pos.Y < 0 || pos.X > MainPanel.ActualWidth || pos.Y > MainPanel.ActualHeight)
+            {
+                HideSwitcher();
+            }
         }
     }
 
