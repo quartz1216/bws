@@ -75,7 +75,7 @@ namespace bws
                 else
                 {
                     // Create default blacklist
-                    File.WriteAllText(blacklistPath, "TextInputHost.exe\n");
+                    File.WriteAllText(blacklistPath, "TextInputHost.exe\nPopupHost\n");
                 }
             }
             catch (Exception ex)
@@ -182,6 +182,10 @@ namespace bws
             // Check Blacklist
             string procName = GetProcessName(hWnd);
             if (!string.IsNullOrEmpty(procName) && _blacklist.Contains(procName))
+                return false;
+
+            string windowTitle = GetWindowTitle(hWnd);
+            if (!string.IsNullOrEmpty(windowTitle) && _blacklist.Contains(windowTitle))
                 return false;
 
             return true;
