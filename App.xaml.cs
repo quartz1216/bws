@@ -51,15 +51,6 @@ namespace bws
 
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
             
-            var metaToggle = new System.Windows.Forms.ToolStripMenuItem("Experimental: Use Meta Key Shortcuts");
-            metaToggle.CheckOnClick = true;
-            metaToggle.CheckedChanged += (s, ev) => 
-            { 
-                KeyboardHook.UseMetaKeyShortcuts = metaToggle.Checked; 
-            };
-            contextMenu.Items.Add(metaToggle);
-            contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
             contextMenu.Items.Add("Quit bws", null, OnQuitClicked);
             _notifyIcon.ContextMenuStrip = contextMenu;
 
