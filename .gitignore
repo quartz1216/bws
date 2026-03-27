@@ -24,3 +24,9 @@ appsettings.json
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# log files
+temp_build.txt
+build_log.txt
+bulid.log
+dotnet_run_log.txt
