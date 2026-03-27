@@ -51,6 +51,15 @@ namespace bws
 
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
             
+            var debugExeTitleToggle = new System.Windows.Forms.ToolStripMenuItem("Debug: exe title");
+            debugExeTitleToggle.CheckOnClick = true;
+            debugExeTitleToggle.CheckedChanged += (s, ev) => 
+            { 
+                WindowManager.DebugExeTitle = debugExeTitleToggle.Checked; 
+            };
+            contextMenu.Items.Add(debugExeTitleToggle);
+            contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
             contextMenu.Items.Add("Quit bws", null, OnQuitClicked);
             _notifyIcon.ContextMenuStrip = contextMenu;
 

@@ -22,6 +22,7 @@ namespace bws
     public static class WindowManager
     {
         public static bool ShowAllWindows { get; set; } = true;
+        public static bool DebugExeTitle { get; set; } = false;
 
         private static HashSet<string> _blacklist = new(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<IntPtr, BitmapSource> _iconCache = new();
@@ -120,7 +121,7 @@ namespace bws
             {
                 if (IsAppWindow(hWnd))
                 {
-                    string title = GetWindowTitle(hWnd);
+                    string title = DebugExeTitle ? GetProcessName(hWnd) : GetWindowTitle(hWnd);
                     if (!string.IsNullOrWhiteSpace(title))
                     {
                         windows.Add(new WindowItem
