@@ -37,7 +37,7 @@
 | **Window-Based Switching** | Shows individual windows, not grouped by app. Two Chrome windows → two icons. |
 | **DWM Live Thumbnail** | Zero-lag live preview via `DwmRegisterThumbnail` — no screenshots. |
 | **Virtual Desktop Aware** | Full support for Windows 11 25H2. Groups windows by workspace with MRU-ordered desktop rows. |
-| **Vim-Style Navigation** | `H/J/K/L`, `A/S/D/W`, arrow keys, or `Tab`/`Shift+Tab` to navigate. |
+| **Vim-Style Navigation** | `H/J/K/L`, `A/S/D/W`, arrow keys, or `Tab`/`Shift` to navigate. |
 | **Quick Actions** | `Q` to close a window ・ `Enter`/`Space` to switch ・ `Esc` to cancel. |
 | **Blacklist** | Filter out noisy background processes via `blacklist.txt`. |
 | **System Tray** | Runs silently in the tray. Right-click for options. |
@@ -61,7 +61,6 @@ We use `IVirtualDesktopManagerInternal` to handle desktop enumeration and switch
 | Shortcut | Action |
 |---|---|
 | `Alt + Tab` | Open switcher (release `Alt` to switch) |
-| `Alt + Shift + Tab` | Open switcher, move backward |
 | `Ctrl + Alt + Tab` | Open switcher in **sticky mode** (stays open) |
 
 ### Navigation (while switcher is open)
@@ -69,9 +68,9 @@ We use `IVirtualDesktopManagerInternal` to handle desktop enumeration and switch
 | Shortcut | Action |
 |---|---|
 | `Tab` / `D` / `L` / `→` | Move right |
-| `Shift+Tab` / `A` / `H` / `←` | Move left |
-| `` ` `` / `S` / `J` / `↓` | Move down (next desktop row) |
-| `` Shift+` `` / `W` / `K` / `↑` | Move up (previous desktop row) |
+| `Shift` / `A` / `H` / `←` | Move left |
+| `S` / `J` / `↓` | Move down (next desktop row) |
+| `W` / `K` / `↑` | Move up (previous desktop row) |
 | `Enter` / `Space` / `LMB` | Switch to selected or clicked window |
 | `Q` / `MMB` | Close the selected or clicked window |
 | `Esc` | Cancel and hide |
