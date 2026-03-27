@@ -1,7 +1,7 @@
 [Setup]
 AppId={{c4b97379-bfe5-48db-addd-1f5c4d3044f0}
 AppName=Better Window Switcher
-AppVersion=1.1
+AppVersion=1.2
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
 DefaultDirName={autopf}\bws

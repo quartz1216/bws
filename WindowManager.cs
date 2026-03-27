@@ -73,8 +73,8 @@ namespace bws
                 }
                 else
                 {
-                    // Create default empty blacklist
-                    File.WriteAllText(blacklistPath, "# Add process names here to exclude them from the Alternative Tab Switcher (e.g. TextInputHost.exe, PhoneExperienceHost.exe)\n");
+                    // Create default blacklist
+                    File.WriteAllText(blacklistPath, "TextInputHost.exe\n");
                 }
             }
             catch (Exception ex)
