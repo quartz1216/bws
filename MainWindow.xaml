@@ -91,109 +91,99 @@
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#01000000" MouseLeftButtonDown="WindowBackground_MouseDown">
         <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
         <!-- Main Flyout Surface - Mica-like acrylic panel -->
-        <Border x:Name="MainPanel" CornerRadius="8" Padding="24,20,24,20" Margin="40">
-            <Border.Background>
-                <SolidColorBrush Color="{StaticResource AcrylicBackgroundColor}"/>
-            </Border.Background>
-            <Border.BorderBrush>
-                <SolidColorBrush Color="#18FFFFFF"/>
-            </Border.BorderBrush>
-            <Border.BorderThickness>1</Border.BorderThickness>
+        <!-- Main Flyout Surface -->
+        <Border x:Name="MainPanel" CornerRadius="8" Margin="40" Background="#1C1C1C" BorderBrush="#404040" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect Color="#000000" BlurRadius="32" ShadowDepth="8" Opacity="0.42" Direction="270"/>
             </Border.Effect>
             
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /> <!-- Title -->
-                    <RowDefinition Height="Auto" /> <!-- Thumbnail Preview -->
-                    <RowDefinition Height="*" />     <!-- Icon Strip (fills remaining space) -->
+                    <RowDefinition Height="Auto" /> <!-- Top Section (Title) -->
+                    <RowDefinition Height="Auto" /> <!-- Middle Section (Thumbnail) -->
+                    <RowDefinition Height="*" />     <!-- Bottom Section (Icons) -->
                 </Grid.RowDefinitions>
 
-                <!-- Window Title -->
-                <TextBlock x:Name="ActiveWindowText" 
-                           Grid.Row="0" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,0,0,12" 
-                           FontSize="14" 
-                           FontWeight="Normal" 
-                           FontFamily="{StaticResource FluentFont}"
-                           Foreground="{StaticResource TextPrimary}"
-                           TextTrimming="CharacterEllipsis"
-                           MaxWidth="600"/>
+                <!-- Title Section -->
+                <Grid Grid.Row="0" Margin="24,20,24,16">
+                    <!-- Window Title -->
+                    <TextBlock x:Name="ActiveWindowText" 
+                               HorizontalAlignment="Center" 
+                               FontSize="14" 
+                               FontWeight="Normal" 
+                               FontFamily="{StaticResource FluentFont}"
+                               Foreground="{StaticResource TextPrimary}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="600"/>
+                </Grid>
 
-                <!-- DWM Thumbnail Anchor -->
-                <Border x:Name="ThumbnailAnchor" 
-                        Grid.Row="1" 
-                        HorizontalAlignment="Center" 
-                        VerticalAlignment="Center" 
-                        Width="600" Height="360" 
-                        Margin="0,0,0,16" 
-                        CornerRadius="4"
-                        Background="Transparent"/>
-
-                <!-- Workspace Rows -->
-                <Border Grid.Row="2" CornerRadius="6" Padding="8" HorizontalAlignment="Center">
-                    <Border.Background>
-                        <SolidColorBrush Color="{StaticResource CardBackgroundColor}"/>
-                    </Border.Background>
-                    <Border.BorderBrush>
-                        <StaticResource ResourceKey="CardStroke"/>
-                    </Border.BorderBrush>
-                    <Border.BorderThickness>1</Border.BorderThickness>
-
-                    <ScrollViewer x:Name="WorkspaceScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="400">
-                    <ItemsControl x:Name="WorkspaceList">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Vertical" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Margin="0,2">
-                                    <!-- Workspace Label (fixed, never scrolls) -->
-                                    <TextBlock Text="{Binding Workspace.Name}" 
-                                               Width="90" 
-                                               Foreground="{StaticResource TextTertiary}" 
-                                               VerticalAlignment="Center" 
-                                               TextAlignment="Right" 
-                                               Margin="0,0,12,0" 
-                                               FontSize="12" 
-                                               FontWeight="Normal"
-                                               FontFamily="{StaticResource FluentFont}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <!-- Window Icons (scrolls horizontally per row) -->
-                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxWidth="800">
-                                        <ItemsControl ItemsSource="{Binding Windows}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Name="IconBorder" 
-                                                            Background="Transparent" 
-                                                            CornerRadius="4" 
-                                                            Margin="3,0" 
-                                                            Padding="8" 
-                                                            Width="56" Height="56"
-                                                            BorderThickness="0"
-                                                            MouseLeftButtonUp="IconBorder_MouseLeftButtonUp"
-                                                            MouseDown="IconBorder_MouseDown">
-                                                        <Image Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    </ScrollViewer>
+                <!-- Thumbnail Section -->
+                <Border Grid.Row="1" Background="#242424" BorderBrush="#191919" BorderThickness="0,1,0,1">
+                    <Grid Margin="24,16,24,16">
+                        <!-- DWM Thumbnail Anchor -->
+                        <Border x:Name="ThumbnailAnchor" 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center" 
+                                Width="600" Height="360" 
+                                CornerRadius="4"
+                                Background="Transparent"/>
+                    </Grid>
                 </Border>
+
+                <!-- Workspace Rows (Bottom Section) -->
+                <Grid Grid.Row="2" Margin="24,16,24,20" HorizontalAlignment="Center">
+                    <ScrollViewer x:Name="WorkspaceScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="400">
+                        <ItemsControl x:Name="WorkspaceList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <!-- Workspace Label (fixed, never scrolls) -->
+                                        <TextBlock Text="{Binding Workspace.Name}" 
+                                                   Width="90" 
+                                                   Foreground="{StaticResource TextTertiary}" 
+                                                   VerticalAlignment="Center" 
+                                                   TextAlignment="Right" 
+                                                   Margin="0,0,12,0" 
+                                                   FontSize="12" 
+                                                   FontWeight="Normal"
+                                                   FontFamily="{StaticResource FluentFont}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <!-- Window Icons (scrolls horizontally per row) -->
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxWidth="800">
+                                            <ItemsControl ItemsSource="{Binding Windows}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Name="IconBorder" 
+                                                                Background="Transparent" 
+                                                                CornerRadius="4" 
+                                                                Margin="3,0" 
+                                                                Padding="8" 
+                                                                Width="56" Height="56"
+                                                                BorderThickness="0"
+                                                                MouseLeftButtonUp="IconBorder_MouseLeftButtonUp"
+                                                                MouseDown="IconBorder_MouseDown">
+                                                            <Image Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
         </Border>
         </Grid>

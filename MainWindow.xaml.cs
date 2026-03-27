@@ -227,7 +227,7 @@ namespace bws
                         var border = VisualTreeHelperEx.FindVisualChild<Border>(colContainer);
                         if (border != null)
                         {
-                            border.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+                            border.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x31, 0x31, 0x31));
                         }
 
                         // Auto-scroll horizontally and vertically after layout completes
