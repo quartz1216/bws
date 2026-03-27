@@ -64,7 +64,7 @@ namespace bws
 
                     if (!isActive)
                     {
-                        if (vkCode == Win32Interop.VK_TAB && isAltPressed)
+                        if (vkCode == Win32Interop.VK_TAB && isAltPressed && !isShiftPressed)
                         {
                             System.Windows.Application.Current.Dispatcher.Invoke(() =>
                             {
@@ -102,7 +102,11 @@ namespace bws
 
                         if (vkCode == Win32Interop.VK_TAB)
                         {
-                            dir = isShiftPressed ? MoveDirection.Left : MoveDirection.Right;
+                            dir = MoveDirection.Right;
+                        }
+                        else if (vkCode == 0x10 || vkCode == Win32Interop.VK_LSHIFT || vkCode == Win32Interop.VK_RSHIFT) // Shift, LShift, RShift
+                        {
+                            dir = MoveDirection.Left;
                         }
                         else if (vkCode == 0x44 || vkCode == 0x4C || vkCode == Win32Interop.VK_RIGHT) // D, L or Right
                         {
@@ -113,10 +117,6 @@ namespace bws
                         {
                             if (vkCode != Win32Interop.VK_LEFT && isMetaPressed) _suppressNextWinKeyUp = true;
                             dir = MoveDirection.Left;
-                        }
-                        else if (vkCode == 0xC0) // Grave (`)
-                        {
-                            dir = isShiftPressed ? MoveDirection.Up : MoveDirection.Down;
                         }
                         else if ((vkCode == 0x53 || vkCode == 0x4A) && !isShiftPressed || vkCode == Win32Interop.VK_DOWN) // S, J or Down
                         {
